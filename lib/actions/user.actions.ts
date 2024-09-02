@@ -7,7 +7,16 @@ import dbConnect from "./mongoose";
 import Thread from "../models/thread.model";
 import { FilterQuery, Query, SortOrder } from "mongoose";
 import { Regex } from "lucide-react";
+import Community from "../models/community.model";
 
+export async function fetchUser(userId: string) {
+  await dbConnect();
+  const user = await User.findOne({ id: userId }).populate({
+    path: "communities",
+    model: Community,
+  });
+  return user;
+}
 export async function updateUser({
   name,
   username,
@@ -18,52 +27,46 @@ export async function updateUser({
 }: UserProps): Promise<void> {
   await dbConnect();
 
-  try {
-    await User.findOneAndUpdate(
-      { id },
-      {
-        name,
-        username: username.toLowerCase(),
-        bio,
-        image,
-        onboarded: true,
-      },
-      {
-        upsert: true,
-      }
-    );
-
-    if (path === "/profile/edit") {
-      revalidatePath(path);
+  await User.findOneAndUpdate(
+    { id },
+    {
+      name,
+      username: username.toLowerCase(),
+      bio,
+      image,
+      onboarded: true,
+    },
+    {
+      upsert: true,
     }
-  } catch (error) {
-    console.log(error);
-  }
-}
+  );
 
-export async function fetchUser(userId: string) {
-  try {
-    await dbConnect();
-    const user = await User.findOne({ id: userId });
-    return user;
-  } catch (error) {
-    console.log(error);
+  if (path === "/profile/edit") {
+    revalidatePath(path);
   }
 }
 
 export async function fetchUserThreads(userId: string) {
+  await dbConnect();
   const threads = await User.findOne({ id: userId }).populate({
     path: "threads",
     model: Thread,
-    populate: {
-      path: "children",
-      model: Thread,
-      populate: {
-        path: "author",
-        model: User,
-        select: "name image _id",
+    populate: [
+      {
+        path: "community",
+        model: Community,
+        select: "name id image _id", // Select the "name" and "_id" fields from the "Community" model
       },
-    },
+      {
+        path: "children",
+        model: Thread,
+        populate: {
+          path: "author",
+          model: User,
+          select: "name image id", // Select the "name" and "_id" fields from the "User" model
+        },
+      },
+    ],
   });
 
   return threads;

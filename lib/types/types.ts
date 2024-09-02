@@ -10,6 +10,6 @@ export interface UserProps {
 export interface CreadThreadParams {
   text: string;
   author: string;
-  communityId: string | null;
+  communityId: string | null | undefined;
   path: string;
 }
